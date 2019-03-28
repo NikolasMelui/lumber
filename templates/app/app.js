@@ -9,6 +9,9 @@ const bodyParser = require('body-parser');
 const cors = require('express-cors');
 const jwt = require('express-jwt');
 
+import { ApolloServer } from 'apollo-server-express';
+import SchemaManager from './graphql';
+
 const app = express();
 
 app.use(favicon(path.join(__dirname, 'public', 'favicon.png')));
@@ -34,11 +37,23 @@ fs.readdirSync('./routes').forEach((file) => {
   }
 });
 
-app.use(require('forest-express-<% if (config.dbDialect === "mongodb") { %>mongoose<% } else {%>sequelize<% } %>').init({
-<% if (config.dbDialect) { %>  modelsDir: __dirname + '/models',<% } %>
-  envSecret: process.env.FOREST_ENV_SECRET,
-  authSecret: process.env.FOREST_AUTH_SECRET,
-<% if (config.dbDialect) { %><% if (config.dbDialect === 'mongodb') { %>  mongoose: require('mongoose')<% } else { %>  sequelize: require('./models').sequelize<% } %><% } %>
-}));
+(async () => {
+  const server = new ApolloServer({
+    introspection: true,
+    playground: true,
+    schema: await new SchemaManager().perform(),
+  });
+
+  server.applyMiddleware({ app, path: '/graphql' });
+
+  app.use(require('forest-express-<% if (config.dbDialect === "mongodb") { %>mongoose<% } else {%>sequelize<% } %>').init({
+  <% if (config.dbDialect) { %>  modelsDir: __dirname + '/models',<% } %>
+    envSecret: process.env.FOREST_ENV_SECRET,
+    authSecret: process.env.FOREST_AUTH_SECRET,
+  <% if (config.dbDialect) { %><% if (config.dbDialect === 'mongodb') { %>  mongoose: require('mongoose')<% } else { %>  sequelize: require('./models').sequelize<% } %><% } %>
+  }));
+})().catch((err) => {
+  console.error(err);
+});
 
 module.exports = app;

@@ -85,7 +85,7 @@ program
     const dumper = await new Dumper(project, config);
 
     await P.each(Object.keys(schema), async (table) => {
-      await dumper.dump(table, schema[table].fields, schema[table].references);
+      await dumper.dump(table, schema[table]);
     });
 
     console.log(chalk.green('\n👍  Hooray, installation success! 👍\n'));
